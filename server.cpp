@@ -16,6 +16,7 @@
 #include <sys/epoll.h>
 #include <string>
 #include <cstring>
+#include <random>
 
 struct connection_t{
 	int socket;
@@ -45,7 +46,12 @@ void waitForHosts(int serverFd, epoll_event event);
 
 void readData();
 
+int generateGameId();
+
+void handleMessage(char* mess, int sock);
+
 int epoll_fd;
+
 
 int main(int argc, char ** argv){
 	epoll_fd = epoll_create1(0);
@@ -177,7 +183,6 @@ void readData(){
 	
 	while(true){
 		int resultCount = epoll_wait(epoll_fd, &event, 1, -1);
-		printf("simea siema\n");
 		if(event.events & EPOLLIN){
 			std::memset(buffer, 0, 512);
 			connection = (connection_t*)event.data.ptr;
@@ -188,6 +193,39 @@ void readData(){
 				continue;
 			}
 			printf("%s\n", buffer);
+			handleMessage(buffer, connection->socket);
 		}
 	}
+}
+
+int generateGameId(){
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distr(100000, 999999);
+	return distr(gen);
+}
+
+void handleMessage(char* mess, int sock){
+	printf("%s\n", mess);
+	std::string strMess = std::string(mess);
+
+	printf("%s\n", strMess.c_str());
+	size_t foundName = strMess.find("\\create_game\\");
+	if(foundName == 0){
+		size_t foundQuantity = strMess.find("\\quantity\\");
+		size_t foundTime = strMess.find("\\time\\");
+		std::string gameName = std::string(&strMess[13], &strMess[foundQuantity]);
+		std::string gameQuantity = std::string(&strMess[foundQuantity+10], &strMess[foundTime]);
+		std::string gameTime = strMess.substr(foundTime+6);
+		//TODO Check if it is unique
+		printf("GameName: %s\n", gameName.c_str());
+		printf("GameQuantity: %s\n", gameQuantity.c_str());
+		printf("GameTime: %s\n", gameTime.c_str());
+		int gameId = generateGameId();
+		printf("%d\n", gameId);
+		if(int i = write(sock, (char*)gameId, sizeof(gameId)) < 0){
+			printf("%d/n", "coś nie działa");
+		}
+	}
+	// printf("%d\n",found);
 }
