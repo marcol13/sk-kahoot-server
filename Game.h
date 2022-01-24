@@ -10,13 +10,15 @@ class Game{
         int time;
         bool** answers;
         bool isGameReady;
+        int nSetAnswers;
 
     public:
-        Game(std::string, int, int, int);
-        ~Game();
+        Game(std::string, int, int, int, int);
+        // ~Game();
 
         std::string gameName;
         std::vector<User> users;
+        int socket;
 
         int getQNumber();
         void setQNumber(int);
@@ -25,7 +27,7 @@ class Game{
         void setGameId(int);
 
         bool* getAnswer(int);
-        void setAnswer(int, bool[4]);
+        void setAnswer(bool[4]);
 
         bool getGameReady();
         void setGameReady();

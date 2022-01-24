@@ -1,3 +1,5 @@
+#include "Game.h"
+
 #include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
@@ -17,6 +19,7 @@
 #include <string>
 #include <cstring>
 #include <random>
+#include <map>
 
 struct connection_t{
 	int socket;
@@ -50,7 +53,10 @@ int generateGameId();
 
 void handleMessage(char* mess, int sock);
 
+bool isIdExists(int id);
+
 int epoll_fd;
+std::map <int, Game*> games = {};
 
 
 int main(int argc, char ** argv){
@@ -188,7 +194,7 @@ void readData(){
 			connection = (connection_t*)event.data.ptr;
 			read_size = read(connection->socket, buffer, sizeof(buffer));
 			if(read_size < 1){
-				fprintf(stderr, "%s disconnected", connection->name.c_str());
+				fprintf(stderr, "%d disconnected", connection->socket);
 				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, connection->socket, NULL);
 				continue;
 			}
@@ -211,21 +217,80 @@ void handleMessage(char* mess, int sock){
 
 	printf("%s\n", strMess.c_str());
 	size_t foundName = strMess.find("\\create_game\\");
+	size_t foundSendAnswers = strMess.find("\\send_answers\\");
+	size_t foundJoin = strMess.find("\\join_game\\");
 	if(foundName == 0){
 		size_t foundQuantity = strMess.find("\\quantity\\");
 		size_t foundTime = strMess.find("\\time\\");
 		std::string gameName = std::string(&strMess[13], &strMess[foundQuantity]);
 		std::string gameQuantity = std::string(&strMess[foundQuantity+10], &strMess[foundTime]);
 		std::string gameTime = strMess.substr(foundTime+6);
-		//TODO Check if it is unique
 		printf("GameName: %s\n", gameName.c_str());
 		printf("GameQuantity: %s\n", gameQuantity.c_str());
 		printf("GameTime: %s\n", gameTime.c_str());
+		//TODO Check if it is unique
 		int gameId = generateGameId();
+		while(isIdExists(gameId)){
+			int gameId = generateGameId();
+		}
 		printf("%d\n", gameId);
-		if(int i = write(sock, (char*)gameId, sizeof(gameId)) < 0){
+		char idChar[6] = {};
+    	std::sprintf(idChar, "%d", gameId);
+		// (char*)&gameId
+		if(int i = write(sock, idChar, sizeof(idChar)) < 0){
 			printf("%d/n", "coś nie działa");
+		}
+		games.insert({gameId, new Game(gameName, gameId, std::stoi(gameQuantity), std::stoi(gameTime), sock)});
+	}
+	else if(foundSendAnswers == 0){
+		size_t foundId = strMess.find("\\id\\");
+		size_t foundAnswers = strMess.find("\\answers\\");
+		bool answers[4] = {};
+		std::string gameId = std::string(&strMess[17], &strMess[foundAnswers]);
+		printf("gameId: %s\n", gameId.c_str());
+		for(int i = 0; i < 4; i++){
+			if(strMess.at(foundAnswers+9+2*i) == '1')
+				answers[i] = true;
+			else	
+				answers[i] = false;
+			printf("Answer %d: %d\n", i, answers[i]);
+		}
+		games[std::stoi(gameId)]->setAnswer(answers);		
+	}
+	else if(foundJoin == 0){
+		size_t foundId = strMess.find("\\id\\");
+		size_t foundUser = strMess.find("\\user\\");
+		std::string gameId = std::string(&strMess[14], &strMess[foundUser]);
+		std::string gameUser = strMess.substr(foundUser+6);
+		printf("gameId: %s\n", gameId.c_str());
+		printf("gameUser: %s\n", gameUser.c_str());
+		if(!isIdExists(std::stoi(gameId))){
+			if(int i = write(sock, "\\error\\id", sizeof("\\error\\id")) < 0){
+				printf("%d/n", "coś nie działa");
+			}
+		}
+		else if(!games[std::stoi(gameId)]->isValidUser(gameUser)){
+			if(int i = write(sock, "\\error\\user", sizeof("\\error\\user")) < 0){
+				printf("%d/n", "coś nie działa");
+			}
+		}
+		else{
+			games[std::stoi(gameId)]->addUser(gameUser);
+			if(int i = write(sock, "\\ok", sizeof("\\ok")) < 0){
+				printf("%d/n", "coś nie działa");
+			}
 		}
 	}
 	// printf("%d\n",found);
+}
+
+bool isIdExists(int id){
+	if(games.empty())
+		return false;
+	std::map<int,Game*>::iterator it;
+	it = games.find(id);
+	if(it != games.end()){
+		return true;
+	}
+	return false;
 }

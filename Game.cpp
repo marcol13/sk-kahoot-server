@@ -1,16 +1,18 @@
 #include "Game.h"
 
-Game::Game(std::string name, int gameId, int qNumber, int time){
+Game::Game(std::string name, int gameId, int qNumber, int time, int socket){
     this->gameName = name;
     this->gameId = gameId;
     this->qNumber = qNumber;
     this->time = time;
     this->isGameReady = false;
     this->answers = new bool*[qNumber];
+    this->socket = socket;
     for(int i = 0; i < qNumber; i++){
         this->answers[i] = new bool[4];
     }
     this->users = {};
+    this->nSetAnswers = 0;
 }
 
 int Game::getQNumber(){
@@ -33,8 +35,10 @@ bool* Game::getAnswer(int n){
     return this->answers[n];
 }
 
-void Game::setAnswer(int n, bool arr[4]){
-    this->answers[n] = arr;
+void Game::setAnswer(bool arr[4]){
+    this->answers[this->nSetAnswers] = arr;
+    if(this->nSetAnswers < this->qNumber)
+        this->nSetAnswers++;
 }
 
 bool Game::getGameReady(){
@@ -47,7 +51,7 @@ void Game::setGameReady(){
 
 bool Game::isValidUser(std::string name){
     if(this->users.size() == 0)
-        return false;
+        return true;
     else{
         for(const User& el : this->users){
             if(name == el.name)

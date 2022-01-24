@@ -7,7 +7,6 @@ class User{
 
     public:
         User(std::string);
-        ~User();
 
         std::string name;
         
