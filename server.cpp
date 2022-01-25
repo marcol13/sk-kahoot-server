@@ -276,7 +276,11 @@ void handleMessage(char* mess, int sock){
 		}
 		else{
 			games[std::stoi(gameId)]->addUser(gameUser);
-			if(int i = write(sock, "\\ok", sizeof("\\ok")) < 0){
+			std::string response = "\\ok\\game_name\\" + games[std::stoi(gameId)]->gameName + "\\quantity\\" + std::to_string(games[std::stoi(gameId)]->getQNumber()) + "\\time\\" + std::to_string(games[std::stoi(gameId)]->getTime());
+			size_t len = response.length();
+			const char *arrResponse = response.c_str();
+			printf("response: %s sizeof: %d\n", arrResponse, sizeof(char) * len);
+			if(int i = write(sock, arrResponse, sizeof(char) * len) < 0){
 				printf("%d/n", "coś nie działa");
 			}
 		}

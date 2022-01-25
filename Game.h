@@ -22,6 +22,8 @@ class Game{
 
         int getQNumber();
         void setQNumber(int);
+
+        int getTime();
         
         int getGameId();
         void setGameId(int);

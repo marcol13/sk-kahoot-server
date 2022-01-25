@@ -23,6 +23,10 @@ void Game::setQNumber(int n){
     this->qNumber = n;
 }
 
+int Game::getTime(){
+    return this->time;
+}
+
 int Game::getGameId(){
     return this->gameId;
 }
