@@ -1,9 +1,10 @@
 #include "User.h"
-#include <string>
+#include "Socket.h"
 
-User::User(std::string name){
+User::User(std::string name, Socket* socket){
     setScore(0);
     this->name = name;
+    this->socket = socket;
 }
 
 int User::getScore(){

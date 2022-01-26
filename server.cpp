@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Socket.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -51,9 +52,13 @@ void readData();
 
 int generateGameId();
 
-void handleMessage(char* mess, int sock);
+void handleMessage(std::string mess, Socket* sock);
 
 bool isIdExists(int id);
+
+void sendMessage(std::string mess);
+
+void readMessage();
 
 int epoll_fd;
 std::map <int, Game*> games = {};
@@ -109,10 +114,10 @@ int main(int argc, char ** argv){
 		// fcntl(clientFd, F_SETFL, fcntl(clientFd, F_GETFL) | O_NONBLOCK); 
 		fcntl(clientFd, F_SETFL, O_NONBLOCK, 1);
 
-		connection_t* connection = new connection_t;
-		connection->socket = clientFd;
-		connection->name = "";
-		event.data.ptr = connection;
+		// connection_t* connection = new connection_t;
+		Socket* socket = new Socket();
+		socket->sock = clientFd;
+		event.data.ptr = socket;
 		
 		epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clientFd, &event);
 
@@ -185,21 +190,30 @@ void readData(){
 	// event.data.fd = servFd;
 	char buffer[512];
 	int read_size;
-	connection_t* connection;
+	Socket* sock;
+	// connection_t* connection;
 	
 	while(true){
 		int resultCount = epoll_wait(epoll_fd, &event, 1, -1);
 		if(event.events & EPOLLIN){
-			std::memset(buffer, 0, 512);
-			connection = (connection_t*)event.data.ptr;
-			read_size = read(connection->socket, buffer, sizeof(buffer));
-			if(read_size < 1){
-				fprintf(stderr, "%d disconnected", connection->socket);
-				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, connection->socket, NULL);
-				continue;
+			
+			sock = (Socket*)event.data.ptr;
+			try{
+				sock->readData();
+
+				for(const auto &i : sock->message){
+					handleMessage(i, sock);
+				}
+				sock->message.clear();
 			}
+			catch(const char* e){
+				printf("exception: %s\n", e);
+				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sock->sock, NULL);
+				sock->socketClose();
+				delete sock;
+			}
+			
 			printf("%s\n", buffer);
-			handleMessage(buffer, connection->socket);
 		}
 	}
 }
@@ -211,11 +225,9 @@ int generateGameId(){
 	return distr(gen);
 }
 
-void handleMessage(char* mess, int sock){
-	printf("%s\n", mess);
-	std::string strMess = std::string(mess);
-
+void handleMessage(std::string strMess, Socket* sock){
 	printf("%s\n", strMess.c_str());
+
 	size_t foundName = strMess.find("\\create_game\\");
 	size_t foundSendAnswers = strMess.find("\\send_answers\\");
 	size_t foundJoin = strMess.find("\\join_game\\");
@@ -234,12 +246,13 @@ void handleMessage(char* mess, int sock){
 			int gameId = generateGameId();
 		}
 		printf("%d\n", gameId);
-		char idChar[6] = {};
-    	std::sprintf(idChar, "%d", gameId);
-		// (char*)&gameId
-		if(int i = write(sock, idChar, sizeof(idChar)) < 0){
-			printf("%d/n", "coś nie działa");
-		}
+		// char idChar[6] = {};
+    	// std::sprintf(idChar, "%d", gameId);
+		// // (char*)&gameId
+		// if(int i = write(sock, idChar, sizeof(idChar)) < 0){
+		// 	printf("%d/n", "coś nie działa");
+		// }
+		sock->writeData(std::to_string(gameId));
 		games.insert({gameId, new Game(gameName, gameId, std::stoi(gameQuantity), std::stoi(gameTime), sock)});
 	}
 	else if(foundSendAnswers == 0){
@@ -265,24 +278,25 @@ void handleMessage(char* mess, int sock){
 		printf("gameId: %s\n", gameId.c_str());
 		printf("gameUser: %s\n", gameUser.c_str());
 		if(!isIdExists(std::stoi(gameId))){
-			if(int i = write(sock, "\\error\\id", sizeof("\\error\\id")) < 0){
-				printf("%d/n", "coś nie działa");
-			}
+			sock->writeData("\\error\\id");
+			throw "Bad id";
+			// sock->socketClose(epoll_fd);
+			// delete sock;
 		}
 		else if(!games[std::stoi(gameId)]->isValidUser(gameUser)){
-			if(int i = write(sock, "\\error\\user", sizeof("\\error\\user")) < 0){
-				printf("%d/n", "coś nie działa");
-			}
+			sock->writeData("\\error\\user");
+			throw "Bad user";
+			// sock->socketClose(epoll_fd);
+			// delete sock;
 		}
 		else{
-			games[std::stoi(gameId)]->addUser(gameUser);
-			std::string response = "\\ok\\game_name\\" + games[std::stoi(gameId)]->gameName + "\\quantity\\" + std::to_string(games[std::stoi(gameId)]->getQNumber()) + "\\time\\" + std::to_string(games[std::stoi(gameId)]->getTime());
-			size_t len = response.length();
-			const char *arrResponse = response.c_str();
-			printf("response: %s sizeof: %d\n", arrResponse, sizeof(char) * len);
-			if(int i = write(sock, arrResponse, sizeof(char) * len) < 0){
-				printf("%d/n", "coś nie działa");
-			}
+			games[std::stoi(gameId)]->addUser(gameUser, sock);
+			std::string response = "\\ok\\game_name\\" + games[std::stoi(gameId)]->gameName + "\\quantity\\" + 
+									std::to_string(games[std::stoi(gameId)]->getQNumber()) + "\\time\\" + 
+									std::to_string(games[std::stoi(gameId)]->getTime());
+			printf("response: %s sizeof: %d\n", response.c_str(), response.length());
+			sock->writeData(response);
+			games[std::stoi(gameId)]->broadcastUsers();
 		}
 	}
 	// printf("%d\n",found);

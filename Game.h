@@ -2,6 +2,9 @@
 
 #include <string>
 #include <vector>
+#include <unistd.h>
+
+class Socket;
 
 class Game{
     private:
@@ -13,12 +16,12 @@ class Game{
         int nSetAnswers;
 
     public:
-        Game(std::string, int, int, int, int);
+        Game(std::string, int, int, int, Socket*);
         // ~Game();
 
         std::string gameName;
         std::vector<User> users;
-        int socket;
+        Socket* socket;
 
         int getQNumber();
         void setQNumber(int);
@@ -35,9 +38,12 @@ class Game{
         void setGameReady();
 
         bool isValidUser(std::string);
-        bool addUser(std::string);
+        bool addUser(std::string, Socket*);
         int userPosition(std::string);
         bool deleteUser(std::string);
+
+        std::string getUsersMessage();
+        void broadcastUsers();
 
         //a - [0,3];
         void checkAnswer(std::string, int q, int a);

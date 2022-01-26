@@ -1,6 +1,7 @@
 #include "Game.h"
+#include "Socket.h"
 
-Game::Game(std::string name, int gameId, int qNumber, int time, int socket){
+Game::Game(std::string name, int gameId, int qNumber, int time, Socket* socket){
     this->gameName = name;
     this->gameId = gameId;
     this->qNumber = qNumber;
@@ -65,9 +66,9 @@ bool Game::isValidUser(std::string name){
     }
 }
 
-bool Game::addUser(std::string name){
+bool Game::addUser(std::string name, Socket* sock){
     if(isValidUser(name)){
-        this->users.push_back(*(new User(name)));
+        this->users.push_back(*(new User(name, sock)));
         return true;
     }
     return false;
@@ -89,6 +90,27 @@ bool Game::deleteUser(std::string name){
         return true;
     }
     return false;
+}
+
+std::string Game::getUsersMessage(){
+    std::string mess = "\\users";
+    if(this->users.size() == 0)
+        mess += "\\";
+    else{
+        for(auto &user : this->users){
+            mess += "\\" + user.name;
+        }
+    }
+    return mess;
+}
+
+void Game::broadcastUsers(){
+    std::string mess = getUsersMessage();
+    printf("Wiadomość : %s\n", mess.c_str());
+    socket->writeData(mess);
+    for(auto &user : this->users){
+        user.socket->writeData(mess);
+    }
 }
 
 void Game::checkAnswer(std::string user, int q, int a){
