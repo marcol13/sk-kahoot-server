@@ -1,4 +1,5 @@
 #include "Socket.h"
+#include "Game.h"
 
 void Socket::readData(){
     std::memset(buffer, 0, 512);

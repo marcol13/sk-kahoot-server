@@ -210,6 +210,15 @@ void readData(){
 				printf("exception: %s\n", e);
 				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sock->sock, NULL);
 				sock->socketClose();
+				if(sock->game->isHost(sock->sock)){
+					sock->game->onHostDisconnected();
+					games.erase(sock->game->getGameId());
+					delete sock->game;
+				}
+				else{
+					sock->game->onPlayerDisconnected(sock->sock);
+				}
+				
 				delete sock;
 			}
 			
@@ -252,8 +261,10 @@ void handleMessage(std::string strMess, Socket* sock){
 		// if(int i = write(sock, idChar, sizeof(idChar)) < 0){
 		// 	printf("%d/n", "coś nie działa");
 		// }
+		Game* myGame = new Game(gameName, gameId, std::stoi(gameQuantity), std::stoi(gameTime), sock);
+		sock->game = myGame;
 		sock->writeData(std::to_string(gameId));
-		games.insert({gameId, new Game(gameName, gameId, std::stoi(gameQuantity), std::stoi(gameTime), sock)});
+		games.insert({gameId, myGame});
 	}
 	else if(foundSendAnswers == 0){
 		size_t foundId = strMess.find("\\id\\");
@@ -277,26 +288,29 @@ void handleMessage(std::string strMess, Socket* sock){
 		std::string gameUser = strMess.substr(foundUser+6);
 		printf("gameId: %s\n", gameId.c_str());
 		printf("gameUser: %s\n", gameUser.c_str());
+		Game* game = games[std::stoi(gameId)];
 		if(!isIdExists(std::stoi(gameId))){
 			sock->writeData("\\error\\id");
 			throw "Bad id";
 			// sock->socketClose(epoll_fd);
 			// delete sock;
 		}
-		else if(!games[std::stoi(gameId)]->isValidUser(gameUser)){
+		else if(!game->isValidUser(gameUser)){
 			sock->writeData("\\error\\user");
 			throw "Bad user";
 			// sock->socketClose(epoll_fd);
 			// delete sock;
 		}
 		else{
-			games[std::stoi(gameId)]->addUser(gameUser, sock);
-			std::string response = "\\ok\\game_name\\" + games[std::stoi(gameId)]->gameName + "\\quantity\\" + 
-									std::to_string(games[std::stoi(gameId)]->getQNumber()) + "\\time\\" + 
-									std::to_string(games[std::stoi(gameId)]->getTime());
+			std::string response = "\\ok\\game_name\\" + game->gameName + "\\quantity\\" + 
+									std::to_string(game->getQNumber()) + "\\time\\" + 
+									std::to_string(game->getTime());
 			printf("response: %s sizeof: %d\n", response.c_str(), response.length());
+			sock->game = game;
 			sock->writeData(response);
-			games[std::stoi(gameId)]->broadcastUsers();
+			sock->writeData(game->getUsersMessage());
+			game->addUser(gameUser, sock);
+			game->broadcastToUsers("\\add_user\\"+gameUser);
 		}
 	}
 	// printf("%d\n",found);

@@ -104,12 +104,12 @@ std::string Game::getUsersMessage(){
     return mess;
 }
 
-void Game::broadcastUsers(){
-    std::string mess = getUsersMessage();
+void Game::broadcastToUsers(std::string mess){
     printf("Wiadomość : %s\n", mess.c_str());
     socket->writeData(mess);
     for(auto &user : this->users){
-        user.socket->writeData(mess);
+        if(!user.isClosed)
+            user.socket->writeData(mess);
     }
 }
 
@@ -124,4 +124,35 @@ void Game::checkAnswer(std::string user, int q, int a){
     }
 }
 
+bool Game::isHost(int sock){
+    if(sock == socket->sock)
+        return true;
+    else 
+        return false;
+}
 
+void Game::onHostDisconnected(){
+    broadcastToUsers("\\unreachable_host\\");
+}
+
+void Game::onPlayerDisconnected(int sock){
+    std::string user;
+    bool before = false;
+    for(User el : this->users){
+        if(sock == el.socket->sock){
+            
+            if(!isGameStarted){
+                user = el.name;
+                before = true;
+            }
+            else{
+                el.isClosed = true;
+            }
+            break;
+        }
+    }
+    if(before){
+    deleteUser(user);
+    broadcastToUsers("\\delete_user\\"+user);
+    }
+}

@@ -4,6 +4,8 @@
 #include <list>
 #include <arpa/inet.h>
 
+class Game;
+
 class Socket{
     public:
         int sock;
@@ -11,6 +13,7 @@ class Socket{
         std::string nowReaded;
         int messageSize = -1;
         std::list<std::string> message;
+        Game* game = nullptr;
 
 
         void readData();

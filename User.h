@@ -11,6 +11,7 @@ class User{
 
         std::string name;
         Socket* socket;
+        bool isClosed = false;
         
         int getScore();
         void setScore(int);

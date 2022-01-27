@@ -1,5 +1,6 @@
 #include "User.h"
 
+
 #include <string>
 #include <vector>
 #include <unistd.h>
@@ -13,6 +14,7 @@ class Game{
         int time;
         bool** answers;
         bool isGameReady;
+        bool isGameStarted;
         int nSetAnswers;
 
     public:
@@ -42,8 +44,18 @@ class Game{
         int userPosition(std::string);
         bool deleteUser(std::string);
 
+        //getResults
+        //sendResults()
+
+        bool isHost(int);
+        void onHostDisconnected();
+        void onPlayerDisconnected(int);
+
+
         std::string getUsersMessage();
-        void broadcastUsers();
+        void broadcastToUsers(std::string);
+
+        
 
         //a - [0,3];
         void checkAnswer(std::string, int q, int a);
