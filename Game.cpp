@@ -9,6 +9,7 @@ Game::Game(std::string name, int gameId, int qNumber, int time, Socket* socket){
     this->isGameReady = false;
     this->answers = new bool*[qNumber];
     this->socket = socket;
+    this->nQuizQuestion = 0;
     for(int i = 0; i < qNumber; i++){
         this->answers[i] = new bool[4];
     }
@@ -104,22 +105,25 @@ std::string Game::getUsersMessage(){
     return mess;
 }
 
-void Game::broadcastToUsers(std::string mess){
+void Game::broadcastToUsers(std::string mess, bool withAdmin){
     printf("Wiadomość : %s\n", mess.c_str());
-    socket->writeData(mess);
+    if(withAdmin)
+        socket->writeData(mess);
     for(auto &user : this->users){
         if(!user.isClosed)
             user.socket->writeData(mess);
     }
 }
 
-void Game::checkAnswer(std::string user, int q, int a){
-    if(this->answers[q][a] == true){
-        for(User el : this->users){
-                if(user == el.name){
-                    el.incrementScore();
-                    break;
-                }
+void Game::checkAnswer(int sock, int q, int a){
+    if(q == this->nQuizQuestion){
+        if(this->answers[q][a] == true){
+            for(User el : this->users){
+                    if(sock == el.socket->sock){
+                        el.incrementScore();
+                        break;
+                    }
+            }
         }
     }
 }
@@ -132,7 +136,7 @@ bool Game::isHost(int sock){
 }
 
 void Game::onHostDisconnected(){
-    broadcastToUsers("\\unreachable_host\\");
+    broadcastToUsers("\\unreachable_host\\", false);
 }
 
 void Game::onPlayerDisconnected(int sock){
@@ -153,6 +157,21 @@ void Game::onPlayerDisconnected(int sock){
     }
     if(before){
     deleteUser(user);
-    broadcastToUsers("\\delete_user\\"+user);
+    broadcastToUsers("\\delete_user\\"+user, true);
     }
+}
+
+bool Game::startGame(){
+    if(users.empty())
+        return false;
+    else
+    {
+        setGameReady();
+        this->isGameStarted = true;
+        return true;
+    }
+}
+
+void Game::nextQuestion(){
+    this->nQuizQuestion++;
 }

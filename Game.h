@@ -16,6 +16,7 @@ class Game{
         bool isGameReady;
         bool isGameStarted;
         int nSetAnswers;
+        int nQuizQuestion;
 
     public:
         Game(std::string, int, int, int, Socket*);
@@ -53,10 +54,12 @@ class Game{
 
 
         std::string getUsersMessage();
-        void broadcastToUsers(std::string);
+        void broadcastToUsers(std::string, bool);
 
-        
+        bool startGame();
+
+        void nextQuestion();
 
         //a - [0,3];
-        void checkAnswer(std::string, int q, int a);
+        void checkAnswer(int, int q, int a);
 };

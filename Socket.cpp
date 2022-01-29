@@ -34,10 +34,10 @@ void Socket::readData(){
 void Socket::writeData(std::string message){
     int size = htonl(message.size());
     if(write(sock, (char*)&size, sizeof(int)) < 0){
-        printf("%d/n", "coś nie działa");
+        printf("%s\n", "coś nie działa");
     }
     if(write(sock, message.c_str(), message.size()) < 0){
-        printf("%d/n", "coś nie działa");
+        printf("%s\n", "coś nie działa");
     }
 }
 
