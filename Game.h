@@ -23,7 +23,7 @@ class Game{
         // ~Game();
 
         std::string gameName;
-        std::vector<User> users;
+        std::vector<User*> users;
         Socket* socket;
 
         int getQNumber();
@@ -39,6 +39,8 @@ class Game{
 
         bool getGameReady();
         void setGameReady();
+
+        bool getGameStarted();
 
         bool isValidUser(std::string);
         bool addUser(std::string, Socket*);
@@ -57,6 +59,8 @@ class Game{
         void broadcastToUsers(std::string, bool);
 
         bool startGame();
+        std::string getUserPoints();
+
 
         void nextQuestion();
 

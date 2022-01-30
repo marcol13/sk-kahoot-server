@@ -7,6 +7,7 @@ Game::Game(std::string name, int gameId, int qNumber, int time, Socket* socket){
     this->qNumber = qNumber;
     this->time = time;
     this->isGameReady = false;
+    this->isGameStarted = false;
     this->answers = new bool*[qNumber];
     this->socket = socket;
     this->nQuizQuestion = 0;
@@ -42,9 +43,13 @@ bool* Game::getAnswer(int n){
 }
 
 void Game::setAnswer(bool arr[4]){
-    this->answers[this->nSetAnswers] = arr;
-    if(this->nSetAnswers < this->qNumber)
+    if(this->nSetAnswers < this->qNumber){
+        this->answers[this->nSetAnswers] = arr;
+        for(int i = 0; i < 4; i ++ ){
+            printf("answer %d in game: %d\n", i+1, this->answers[this->nSetAnswers][i]);
+        }
         this->nSetAnswers++;
+    }   
 }
 
 bool Game::getGameReady(){
@@ -59,8 +64,8 @@ bool Game::isValidUser(std::string name){
     if(this->users.size() == 0)
         return true;
     else{
-        for(const User& el : this->users){
-            if(name == el.name)
+        for(User* el : this->users){
+            if(name == el->name)
                 return false;
         }
         return true;
@@ -69,7 +74,7 @@ bool Game::isValidUser(std::string name){
 
 bool Game::addUser(std::string name, Socket* sock){
     if(isValidUser(name)){
-        this->users.push_back(*(new User(name, sock)));
+        this->users.push_back(new User(name, sock));
         return true;
     }
     return false;
@@ -77,8 +82,8 @@ bool Game::addUser(std::string name, Socket* sock){
 
 int Game::userPosition(std::string name){
     int i = 0;
-    for(const User& el : this->users){
-            if(name == el.name)
+    for(User* el : this->users){
+            if(name == el->name)
                 return i;
             i++;
         }
@@ -99,7 +104,7 @@ std::string Game::getUsersMessage(){
         mess += "\\";
     else{
         for(auto &user : this->users){
-            mess += "\\" + user.name;
+            mess += "\\" + user->name;
         }
     }
     return mess;
@@ -110,17 +115,23 @@ void Game::broadcastToUsers(std::string mess, bool withAdmin){
     if(withAdmin)
         socket->writeData(mess);
     for(auto &user : this->users){
-        if(!user.isClosed)
-            user.socket->writeData(mess);
+        if(!user->isClosed)
+            user->socket->writeData(mess);
     }
 }
 
 void Game::checkAnswer(int sock, int q, int a){
+    for(int i = 0; i < 4; i++){
+        printf("Odpowiedz %d to %d\n", i+1, this->answers[q][i]);
+    }
+    printf("odpowiedz: %d, w klasie GAME: %d, odpowiedź: %d\n", q, this->nQuizQuestion, this->answers[q][a]);
     if(q == this->nQuizQuestion){
         if(this->answers[q][a] == true){
-            for(User el : this->users){
-                    if(sock == el.socket->sock){
-                        el.incrementScore();
+            for(User* el : this->users){
+                    if(sock == el->socket->sock){
+                        printf("ZNALAZLEM\n");
+                        el->incrementScore();
+                        printf("mam %d punktów\n", el->getScore());
                         break;
                     }
             }
@@ -142,15 +153,15 @@ void Game::onHostDisconnected(){
 void Game::onPlayerDisconnected(int sock){
     std::string user;
     bool before = false;
-    for(User el : this->users){
-        if(sock == el.socket->sock){
+    for(User* el : this->users){
+        if(sock == el->socket->sock){
             
             if(!isGameStarted){
-                user = el.name;
+                user = el->name;
                 before = true;
             }
             else{
-                el.isClosed = true;
+                el->isClosed = true;
             }
             break;
         }
@@ -172,6 +183,20 @@ bool Game::startGame(){
     }
 }
 
+bool Game::getGameStarted(){
+    return this->isGameStarted;
+}
+
 void Game::nextQuestion(){
     this->nQuizQuestion++;
+}
+
+std::string Game::getUserPoints(){
+    std::string command = "\\game_results";
+    for(User* el : this->users){
+        printf("jestem %s i mam %d\n", el->name.c_str(), el->getScore());
+        command += "\\name\\" + el->name;
+        command += "\\score\\" + std::to_string(el->getScore());
+    }
+    return command;
 }

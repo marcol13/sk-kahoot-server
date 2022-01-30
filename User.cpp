@@ -2,7 +2,7 @@
 #include "Socket.h"
 
 User::User(std::string name, Socket* socket){
-    setScore(0);
+    this->score = 0;
     this->name = name;
     this->socket = socket;
 }

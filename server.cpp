@@ -210,7 +210,7 @@ void readData(){
 				printf("exception: %s\n", e);
 				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sock->sock, NULL);
 				sock->socketClose();
-				if(e != "Bad id" && e != "Bad user"){
+				if(e != "Bad id" && e != "Bad user" && e != "Game already started"){
 					if(sock->game->isHost(sock->sock)){
 						sock->game->onHostDisconnected();
 						games.erase(sock->game->getGameId());
@@ -245,6 +245,7 @@ void handleMessage(std::string strMess, Socket* sock){
 	size_t foundNext = strMess.find("\\next_question\\");
 	size_t foundStudentAnswer = strMess.find("\\answer_student\\");
 	size_t foundEndGame = strMess.find("\\end_game\\");
+	size_t foundCountdown = strMess.find("\\countdown_end\\");
 	if(foundName == 0){
 		size_t foundQuantity = strMess.find("\\quantity\\");
 		size_t foundTime = strMess.find("\\time\\");
@@ -274,7 +275,7 @@ void handleMessage(std::string strMess, Socket* sock){
 	else if(foundSendAnswers == 0){
 		size_t foundId = strMess.find("\\id\\");
 		size_t foundAnswers = strMess.find("\\answers\\");
-		bool answers[4] = {};
+		bool* answers = new bool[4];
 		std::string gameId = std::string(&strMess[17], &strMess[foundAnswers]);
 		printf("gameId: %s\n", gameId.c_str());
 		for(int i = 0; i < 4; i++){
@@ -306,6 +307,10 @@ void handleMessage(std::string strMess, Socket* sock){
 				throw "Bad user";
 				// sock->socketClose(epoll_fd);
 				// delete sock;
+			}
+			else if(game->getGameStarted()){
+				sock->writeData("\\error\\started");
+				throw "Game already started";
 			}
 			else{
 				std::string response = "\\ok\\game_name\\" + game->gameName + "\\quantity\\" + 
@@ -348,7 +353,7 @@ void handleMessage(std::string strMess, Socket* sock){
 		std::string answer = strMess.substr(foundAnswer + 8);
 		printf("answers: gameId - %s, number - %s, answer %s\n", gameId.c_str(), number.c_str(), answer.c_str());
 		Game* game = games[std::stoi(gameId)];
-		game->checkAnswer(sock->sock, std::stoi(number), std::stoi(answer));
+		game->checkAnswer(sock->sock, std::stoi(number) - 1, std::stoi(answer));
 	}
 	else if(foundEndGame == 0){
 		size_t foundId = strMess.find("\\id\\");
@@ -357,6 +362,14 @@ void handleMessage(std::string strMess, Socket* sock){
 		game->broadcastToUsers("\\end_game\\", false);
 		games.erase(sock->game->getGameId());
 		delete sock->game;
+	}
+	else if(foundCountdown == 0){
+		size_t foundId = strMess.find("\\id\\");
+		std::string gameId = strMess.substr(foundId + 4);
+		Game* game = games[std::stoi(gameId)];
+		game->socket->writeData("\\question_end\\admin");
+		game->broadcastToUsers("\\question_end\\user", false);
+		game->broadcastToUsers(game->getUserPoints(), true);
 	}
 	// printf("%d\n",found);
 }
