@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.1)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(projekt VERSION 1.0)
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT})
+add_executable(projekt server.cpp Game.cpp Game.h User.cpp User.h Socket.cpp Socket.h)

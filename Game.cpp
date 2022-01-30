@@ -148,14 +148,14 @@ bool Game::isHost(int sock){
 
 void Game::onHostDisconnected(){
     broadcastToUsers("\\unreachable_host\\", false);
+    disconnectAllUsers();
 }
 
 void Game::onPlayerDisconnected(int sock){
     std::string user;
     bool before = false;
     for(User* el : this->users){
-        if(sock == el->socket->sock){
-            
+        if(sock == el->socket->sock){ 
             if(!isGameStarted){
                 user = el->name;
                 before = true;
@@ -199,4 +199,10 @@ std::string Game::getUserPoints(){
         command += "\\score\\" + std::to_string(el->getScore());
     }
     return command;
+}
+
+void Game::disconnectAllUsers(){
+    for(User* el : this->users){
+        el->socket->socketClose();
+    }
 }

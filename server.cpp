@@ -21,6 +21,7 @@
 #include <cstring>
 #include <random>
 #include <map>
+#include <stdexcept>
 
 struct connection_t{
 	int socket;
@@ -72,8 +73,7 @@ int main(int argc, char ** argv){
 	}
 
 	// get and validate port number
-	if(argc != 2) error(1, 0, "Need 1 arg (port)");
-	auto port = readPort(argv[1]);
+	auto port = readPort("5050");
 	
 	// create socket
 	servFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -294,6 +294,14 @@ void handleMessage(std::string strMess, Socket* sock){
 		std::string gameUser = strMess.substr(foundUser+6);
 		printf("gameId: %s\n", gameId.c_str());
 		printf("gameUser: %s\n", gameUser.c_str());
+		try{
+			int nGameId = std::stoi(gameId);
+		}
+		catch(std::invalid_argument& e){
+			printf("error: %s\n", e);
+			sock->writeData("\\error\\id");
+			return;
+		}
 		if(!isIdExists(std::stoi(gameId))){
 			sock->writeData("\\error\\id");
 			throw "Bad id";
@@ -360,6 +368,8 @@ void handleMessage(std::string strMess, Socket* sock){
 		std::string gameId = strMess.substr(foundId + 4);
 		Game* game = games[std::stoi(gameId)];
 		game->broadcastToUsers("\\end_game\\", false);
+		game->disconnectAllUsers();
+		sock->socketClose();
 		games.erase(sock->game->getGameId());
 		delete sock->game;
 	}

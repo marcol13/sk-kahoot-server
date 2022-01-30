@@ -42,6 +42,8 @@ class Game{
 
         bool getGameStarted();
 
+        void disconnectAllUsers();
+
         bool isValidUser(std::string);
         bool addUser(std::string, Socket*);
         int userPosition(std::string);
