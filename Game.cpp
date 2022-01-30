@@ -45,9 +45,6 @@ bool* Game::getAnswer(int n){
 void Game::setAnswer(bool arr[4]){
     if(this->nSetAnswers < this->qNumber){
         this->answers[this->nSetAnswers] = arr;
-        for(int i = 0; i < 4; i ++ ){
-            printf("answer %d in game: %d\n", i+1, this->answers[this->nSetAnswers][i]);
-        }
         this->nSetAnswers++;
     }   
 }
@@ -111,7 +108,6 @@ std::string Game::getUsersMessage(){
 }
 
 void Game::broadcastToUsers(std::string mess, bool withAdmin){
-    printf("Wiadomość : %s\n", mess.c_str());
     if(withAdmin)
         socket->writeData(mess);
     for(auto &user : this->users){
@@ -121,17 +117,11 @@ void Game::broadcastToUsers(std::string mess, bool withAdmin){
 }
 
 void Game::checkAnswer(int sock, int q, int a){
-    for(int i = 0; i < 4; i++){
-        printf("Odpowiedz %d to %d\n", i+1, this->answers[q][i]);
-    }
-    printf("odpowiedz: %d, w klasie GAME: %d, odpowiedź: %d\n", q, this->nQuizQuestion, this->answers[q][a]);
     if(q == this->nQuizQuestion){
         if(this->answers[q][a] == true){
             for(User* el : this->users){
                     if(sock == el->socket->sock){
-                        printf("ZNALAZLEM\n");
                         el->incrementScore();
-                        printf("mam %d punktów\n", el->getScore());
                         break;
                     }
             }
@@ -194,7 +184,6 @@ void Game::nextQuestion(){
 std::string Game::getUserPoints(){
     std::string command = "\\game_results";
     for(User* el : this->users){
-        printf("jestem %s i mam %d\n", el->name.c_str(), el->getScore());
         command += "\\name\\" + el->name;
         command += "\\score\\" + std::to_string(el->getScore());
     }

@@ -20,7 +20,6 @@ class Game{
 
     public:
         Game(std::string, int, int, int, Socket*);
-        // ~Game();
 
         std::string gameName;
         std::vector<User*> users;
@@ -48,9 +47,6 @@ class Game{
         bool addUser(std::string, Socket*);
         int userPosition(std::string);
         bool deleteUser(std::string);
-
-        //getResults
-        //sendResults()
 
         bool isHost(int);
         void onHostDisconnected();

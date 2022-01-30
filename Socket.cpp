@@ -14,13 +14,13 @@ void Socket::readData(){
         if(messageSize < 0){
             if(nowReaded.size() > sizeof(int)){
                 messageSize = ntohl(*(int*)nowReaded.c_str());
-                printf("message: %d", messageSize);
                 nowReaded = nowReaded.substr(sizeof(int));
             }
             else
                 break;
-        }   
-        if(messageSize <= nowReaded.size()){
+        }  
+        int len = nowReaded.length();
+        if(messageSize <= len){
             message.push_back(nowReaded.substr(0,messageSize));
             nowReaded = nowReaded.substr(messageSize);
             messageSize = -1;
@@ -34,10 +34,10 @@ void Socket::readData(){
 void Socket::writeData(std::string message){
     int size = htonl(message.size());
     if(write(sock, (char*)&size, sizeof(int)) < 0){
-        printf("%s\n", "coś nie działa");
+        printf("%s\n", "write data");
     }
     if(write(sock, message.c_str(), message.size()) < 0){
-        printf("%s\n", "coś nie działa");
+        printf("%s\n", "write data");
     }
 }
 
